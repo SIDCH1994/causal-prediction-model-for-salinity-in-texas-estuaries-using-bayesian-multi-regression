@@ -181,4 +181,109 @@ ggpairs(Baffin_trans,
 dev.off()
 ################################################
 
+##############################################################################
+# END OF PHASE-1
+##############################################################################
+
+
+
+
+
+###############################################################################
+# Phase 2: Model Development and Comparision
+###############################################################################
+# Step-1: Model-1: ulam() model with all selected variables.
+# Step-2: Model-2: ulam() model with 'silicate' variable removed.
+# Step-3: Model-3: ulam() model with 'silicate' and 'DO_prec' removed.
+# Step-4: Comparision of all 3 models using WAIC and PSIS
+###############################################################################
+
+
+# Step-1: Model-1: ulam() model with all selected variables.
+###################################################################
+# Renaming the variable DO% to DO_perc to make it make it ulam() compatible
+Baffin_trans1 <- Baffin_trans %>% rename(DO_perc = `DO%`)
+
+model1 <- ulam(alist(Salinity ~ normal(mu, sigma),
+                     mu <- alpha + b_temp*Temp + b_do*DO_perc + b_pH*pH + 
+                       b_TOC*TOC + b_TN*TN + b_silicate*silicate,
+                     alpha ~ normal(0, 1),
+                     b_temp ~ normal(0, 0.5),
+                     b_do ~ normal(0, 0.5),
+                     b_pH ~ normal(0, 0.5),
+                     b_TOC ~ normal(0, 0.5),
+                     b_TN ~ normal(0, 0.5),
+                     b_silicate ~ normal(0, 0.5),
+                     sigma ~ exponential(1)),
+               data = Baffin_trans1,
+               chains = 4, 
+               cores = 4,
+               log_lik = TRUE)
+precis(model1)
+
+
+# Step-2: Model-2: ulam() model with 'silicate' variable removed.
+###################################################################
+model2 <- ulam(alist(Salinity ~ normal(mu, sigma),
+                     mu <- alpha + b_temp*Temp + b_do*DO_perc + b_pH*pH + 
+                                   b_TOC*TOC + b_TN*TN,
+                     alpha ~ normal(0, 1),
+                     b_temp ~ normal(0, 0.5),
+                     b_do ~ normal(0, 0.5),
+                     b_pH ~ normal(0, 0.5),
+                     b_TOC ~ normal(0, 0.5),
+                     b_TN ~ normal(0, 0.5),
+                     sigma ~ exponential(1)),
+               data = Baffin_trans1,
+               chains = 4, 
+               cores = 4,
+               log_lik = TRUE)
+precis(model2)
+
+
+# Step-3: Model-3: ulam() model with 'silicate' and 'DO_prec' removed.
+###################################################################
+model3 <- ulam(alist(Salinity ~ normal(mu, sigma),
+                     mu <- alpha + b_temp*Temp + b_pH*pH + 
+                       b_TOC*TOC + b_TN*TN,
+                     alpha ~ normal(0, 1),
+                     b_temp ~ normal(0, 0.5),
+                     b_pH ~ normal(0, 0.5),
+                     b_TOC ~ normal(0, 0.5),
+                     b_TN ~ normal(0, 0.5),
+                     sigma ~ exponential(1)),
+               data = Baffin_trans1,
+               chains = 4, 
+               cores = 4,
+               log_lik = TRUE)
+precis(model3)
+
+
+# Step-4: Comparision of all 3 models using WAIC and PSIS.
+###################################################################
+compare(model1, model2, model3, func = PSIS)
+compare(model1, model2, model3, func = WAIC)
+
+# decided to go ahead with the model-2
+
+
+##############################################################################
+# END OF PHASE-2
+##############################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
