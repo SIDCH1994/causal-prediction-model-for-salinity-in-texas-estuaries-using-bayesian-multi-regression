@@ -152,7 +152,7 @@ ggsave("plots/transformed_boxplots.png", box_plot, width = 10, height = 6, dpi =
 baffin_long2 <- pivot_longer(Baffin_trans, cols = everything(), names_to = "Variable", values_to = "Value")
 
 ggplot(baffin_long2, aes(x = Value)) +
-  geom_histogram(bins = 30, fill = "#1855c7", color = "white") +
+  geom_histogram(bins = 10, fill = "#1855c7", color = "white") +
   facet_wrap(~ Variable, scales = "free", ncol = 4) +
   theme_minimal() +
   labs(title = "Histograms of selected Transformed Numeric Variables in Baffin Bay",
@@ -206,14 +206,14 @@ Baffin_trans1 <- Baffin_trans %>% rename(DO_perc = `DO%`)
 
 model1 <- ulam(alist(Salinity ~ normal(mu, sigma),
                      mu <- alpha + b_temp*Temp + b_do*DO_perc + b_pH*pH + 
-                       b_TOC*TOC + b_TN*TN + b_silicate*silicate,
-                     alpha ~ normal(0, 1),
-                     b_temp ~ normal(0, 0.5),
-                     b_do ~ normal(0, 0.5),
-                     b_pH ~ normal(0, 0.5),
-                     b_TOC ~ normal(0, 0.5),
-                     b_TN ~ normal(0, 0.5),
-                     b_silicate ~ normal(0, 0.5),
+                                   b_TOC*TOC + b_TN*TN + b_silicate*silicate,
+                           alpha ~ normal(0, 1),
+                           b_temp ~ normal(0, 0.5),
+                           b_do ~ normal(0, 0.5),
+                           b_pH ~ normal(0, 0.5),
+                           b_TOC ~ normal(0, 0.5),
+                           b_TN ~ normal(0, 0.5),
+                           b_silicate ~ normal(0, 0.5),
                      sigma ~ exponential(1)),
                data = Baffin_trans1,
                chains = 4, 
@@ -227,12 +227,12 @@ precis(model1)
 model2 <- ulam(alist(Salinity ~ normal(mu, sigma),
                      mu <- alpha + b_temp*Temp + b_do*DO_perc + b_pH*pH + 
                                    b_TOC*TOC + b_TN*TN,
-                     alpha ~ normal(0, 1),
-                     b_temp ~ normal(0, 0.5),
-                     b_do ~ normal(0, 0.5),
-                     b_pH ~ normal(0, 0.5),
-                     b_TOC ~ normal(0, 0.5),
-                     b_TN ~ normal(0, 0.5),
+                           alpha ~ normal(0, 1),
+                           b_temp ~ normal(0, 0.5),
+                           b_do ~ normal(0, 0.5),
+                           b_pH ~ normal(0, 0.5),
+                           b_TOC ~ normal(0, 0.5),
+                           b_TN ~ normal(0, 0.5),
                      sigma ~ exponential(1)),
                data = Baffin_trans1,
                chains = 4, 
@@ -244,13 +244,12 @@ precis(model2)
 # Step-3: Model-3: ulam() model with 'silicate' and 'DO_prec' removed.
 ###################################################################
 model3 <- ulam(alist(Salinity ~ normal(mu, sigma),
-                     mu <- alpha + b_temp*Temp + b_pH*pH + 
-                       b_TOC*TOC + b_TN*TN,
-                     alpha ~ normal(0, 1),
-                     b_temp ~ normal(0, 0.5),
-                     b_pH ~ normal(0, 0.5),
-                     b_TOC ~ normal(0, 0.5),
-                     b_TN ~ normal(0, 0.5),
+                     mu <- alpha + b_temp*Temp + b_pH*pH + b_TOC*TOC + b_TN*TN,
+                           alpha ~ normal(0, 1),
+                           b_temp ~ normal(0, 0.5),
+                           b_pH ~ normal(0, 0.5),
+                           b_TOC ~ normal(0, 0.5),
+                           b_TN ~ normal(0, 0.5),
                      sigma ~ exponential(1)),
                data = Baffin_trans1,
                chains = 4, 
@@ -274,16 +273,71 @@ compare(model1, model2, model3, func = WAIC)
 
 
 
+###############################################################################
+# Phase 3: Model checks and Interpretation
+###############################################################################
+# Step-1: Prior Predictive check
+# Step-2: Model-2: ulam() model with 'silicate' variable removed.
+# Step-3: Model-3: ulam() model with 'silicate' and 'DO_prec' removed.
+# Step-4: Comparision of all 3 models using WAIC and PSIS
+###############################################################################
 
 
+# Step-1: Prior Predictive check
+###################################################################
+# prior choice 1: alpha = normal(0,1); b_coeffi = normal(0,0.5); sigma = expo(1)
+# prior choice 2: alpha = normal(0,1); b_coeffi = normal(0,1); sigma = expo(1)
+# prior choice 3: alpha = normal(0,1.5); b_coeffi = normal(0,1); sigma = expo(1)
+# prior choice 4: alpha = normal(0,2); b_coeffi = normal(0,1); sigma = expo(1)
+# prior choice 5: alpha = normal(0,1.5); b_coeffi = normal(0,1); sigma = expo(1)
+# prior choice 6: alpha = normal(0,1.5); b_coeffi = normal(0,0.5); sigma = expo(1)
+
+par(mfrow = c(2,2))
+model2_prior <- ulam(alist(Salinity ~ normal(mu, sigma),
+                            mu <- alpha + b_temp*Temp + b_do*DO_perc + b_pH*pH +
+                                          b_TOC*TOC + b_TN*TN + b_silicate*silicate,
+                                  alpha ~ normal(0, 1.5),
+                                  b_temp ~ normal(0, 0.5),
+                                  b_do ~ normal(0, 0.5),
+                                  b_pH ~ normal(0, 0.5),
+                                  b_TOC ~ normal(0, 0.5),
+                                  b_TN ~ normal(0, 0.5),
+                                  b_silicate ~ normal(0, 0.5),
+                            sigma ~ exponential(1)),
+                     data = Baffin_trans1,
+                     chains = 4,
+                     cores = 4,
+                     sample_prior = TRUE)
+
+# Simulate from the prior only (not conditioned on data)
+prior_sim <- extract.samples(model2_prior)
+
+# Generate the prior predictive distribution for mu
+mu_prior <- prior_sim$alpha +
+  prior_sim$b_temp * Baffin_trans1$Temp +
+  prior_sim$b_do * Baffin_trans1$DO_perc +
+  prior_sim$b_pH * Baffin_trans1$pH +
+  prior_sim$b_TOC * Baffin_trans1$TOC +
+  prior_sim$b_TN * Baffin_trans1$TN +
+  prior_sim$b_silicate * Baffin_trans1$silicate
+
+# Simulate salinity values (prior predictive)
+N <- nrow(Baffin_trans1)
+y_prior_pred <- matrix(NA, nrow = length(prior_sim$sigma), ncol = N)
+for (i in 1:length(prior_sim$sigma)) {
+  y_prior_pred[i, ] <- rnorm(N, mu_prior[i, ], prior_sim$sigma[i])
+}
 
 
+# Plot prior predictive salinity values
+prior_df <- data.frame(SimulatedSalinity = as.vector(y_prior_pred))
 
-
-
-
-
-
-
+print(ggplot(prior_df, aes(x = SimulatedSalinity)) +
+  geom_histogram(bins = 40, fill = "#0073C2FF", alpha = 0.6) +
+  geom_vline(xintercept = mean(Baffin_trans1$Salinity), color = "red", linetype = "dashed") +
+  labs(title = "Prior Predictive Distribution of Salinity",
+       subtitle = "Blue: Simulated from prior | Red: Mean of real (standardized) salinity",
+       x = "Simulated Salinity", y = "Frequency") +
+  theme_minimal())
 
 
